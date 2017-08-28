@@ -1,0 +1,123 @@
+000100  IDENTIFICATION DIVISION.                                        00010000
+000200  PROGRAM-ID. P26AP09.                                            00020000
+000300  DATA DIVISION.                                                  00030000
+000400  WORKING-STORAGE SECTION.                                        00040000
+000500  01  PARA-TABLE                        VALUE SPACES.             00050000
+000600      03  PARA-NAME     PIC X(16) OCCURS 12 TIMES.                00060000
+000700  01  PARA-SUB          PIC 9(02) VALUE ZERO.                     00070000
+000800  01 WS-CA.                                                       00080000
+000900     03  WS-USER-CARDNO        PIC 9(16) VALUE ZERO.              00090000
+001000     03  WS-ACC-TYPE           PIC X(07) VALUE SPACES.            00100000
+001100  01 WS-CARDNO         PIC 9(16) VALUE ZERO.                      00110000
+001200  01 TRANS-COUNT       PIC 9(01) VALUE ZERO.                      00120000
+001300  01 WS-RESP-CODE      PIC S9(08) COMP VALUE ZERO.                00130000
+001400  01 WS-DATE-TIME             PIC S9(15) COMP-3 VALUE ZERO.       00140000
+001500         COPY USERREC.                                            00150000
+001600         COPY TRANSREC.                                           00160000
+001700         COPY P26AS01.                                            00170000
+001800         COPY DFHAID.                                             00180000
+001900 LINKAGE SECTION.                                                 00190000
+002000 01 DFHCOMMAREA   PIC X(25).                                      00200001
+002100 PROCEDURE DIVISION.                                              00210000
+002200******************************************************            00220000
+002300 MAIN-PARA.                                                       00230000
+002400        IF EIBCALEN = ZERO                                        00240000
+002500             PERFORM ERROR-PARA                                   00250004
+002600        ELSE                                                      00260004
+002700             MOVE DFHCOMMAREA TO WS-CA                            00270000
+002800             PERFORM READ-TRANS-FILE                              00280000
+002900        END-IF.                                                   00290000
+003000******************************************************            00300000
+003100 END-PARA.                                                        00310000
+003200        EXEC CICS RETURN                                          00320000
+003300             TRANSID('P26I')                                      00330000
+003400             COMMAREA(WS-CA)                                      00340000
+003500        END-EXEC.                                                 00350000
+003600******************************************************            00360000
+003700 SEND-MAP-PARA.                                                   00370000
+003800        EXEC CICS SEND                                            00380000
+003900             MAP('BMSMINI')                                       00390000
+004000             MAPSET('P26AS01')                                    00400000
+004100             FROM(BMSMINIO)                                       00410000
+004200             ERASE                                                00420000
+004300        END-EXEC                                                  00430000
+004400        ADD 1 TO TRANS-COUNT                                      00440000
+004500        PERFORM RESPONSE-PARA.                                    00450000
+004600******************************************************            00460000
+004700 READ-TRANS-FILE.                                                 00470000
+004800        IF TRANS-COUNT > 5                                        00480000
+004900           MOVE 'YOU CAN VIEW LAST 5 TRANSACTIONS ONLY' TO MSGBO  00490000
+005000        ELSE                                                      00500000
+005100           MOVE WS-USER-CARDNO TO WS-CARDNO                       00510000
+005200                                                                  00520000
+005300           MOVE HIGH VALUES TO TRANS-NO                           00530000
+005400           PERFORM PREV-REC-PARA                                  00540000
+005500        END-IF.                                                   00550000
+005600******************************************************            00560000
+005700 PREV-REC-PARA.                                                   00570000
+005800        PERFORM STARTBR-PARA                                      00580000
+005900        EVALUATE WS-RESP-CODE                                     00590000
+006000             WHEN DFHRESP(NORMAL)                                 00600000
+006100          PERFORM READPREV-PARA 2 TIMES                           00610000
+006200          PERFORM MOVE-PARA                                       00620000
+006300              PERFORM ENDBR-PARA                                  00630000
+006400                 PERFORM SEND-MAP-PARA                            00640000
+006500             WHEN DFHRESP(NOTFND)                                 00650000
+006600                 MOVE 'FILE NOT FOUND'  TO MSGBO                  00660000
+006700             WHEN OTHER                                           00670000
+006800                 MOVE 'ERROR ACCESSING FILE' TO MSGBO             00680000
+006900        END-EVALUATE.                                             00690000
+007000******************************************************            00700000
+007100 STARTBR-PARA.                                                    00710000
+007200        EXEC CICS STARTBR                                         00720000
+007300             FILE('P26EFILE')                                     00730000
+007400             RIDFLD(TRANS-NO)                                     00740000
+007500             RESP(WS-RESP-CODE)                                   00750000
+007600        END-EXEC.                                                 00760000
+007700******************************************************            00770000
+007800 READPREV-PARA.                                                   00780000
+007900        EXEC CICS READPREV                                        00790000
+008000             FILE('P26EFILE')                                     00800000
+008100             RIDFLD(TRANS-NO)                                     00810000
+008200             INTO(TRANS-RECORD)                                   00820000
+008300             RESP(WS-RESP-CODE)                                   00830000
+008400        END-EXEC.                                                 00840000
+008500******************************************************            00850000
+008600 ENDBR-PARA.                                                      00860000
+008700         EXEC CICS                                                00870000
+008800              ENDBR FILE('P26EFILE')                              00880000
+008900         END-EXEC.                                                00890000
+009000******************************************************            00900000
+009100 MOVE-PARA.                                                       00910000
+009200        MOVE USER-NAME    TO MSNAMEO                              00920000
+009300        MOVE USER-ACCNO   TO MSACCNOO                             00930000
+009400        MOVE USER-CARDNO  TO MSCARDNOO                            00940000
+009500        MOVE USER-ACCTYPE TO MSTYPEO                              00950000
+009600        MOVE TRANS-ID     TO MSAMTO                               00960000
+009700        MOVE TRANS-TYPE   TO MSDATEO                              00970000
+009800        MOVE TRANS-AMT    TO BALO.                                00980000
+009900******************************************************            00990000
+010000 RESPONSE-PARA.                                                   01000000
+010100        EVALUATE EIBAID                                           01010000
+010200        WHEN DFENTER                                              01020000
+010300             EXEC CICS XCTL                                       01030000
+010400                  PROGRAM('P26AP01')                              01040000
+010500                  COMMAREA(WS-CA)                                 01050000
+010600             END-EXEC                                             01060000
+010700        WHEN DFHPF3                                               01070000
+010800             EXEC CICS XCTL                                       01080000
+010900                  PROGRAM('P26AP05')                              01090000
+011000                  COMMAREA(WS-CA)                                 01100000
+011100             END-EXEC                                             01110000
+011200        WHEN DFHPF7                                               01120000
+011300             PERFORM PREV-REC-PARA                                01130000
+011400        WHEN OTHER                                                01140000
+011500             MOVE 'INVALID KEY PRESSED' TO MSGBO                  01150000
+011600        END-EVALUATE.                                             01160000
+011700******************************************************            01170000
+011800 ERROR-PARA.                                                      01180004
+011900      EXEC CICS XCTL                                              01190004
+012000           PROGRAM('P26AP01')                                     01200004
+012100           COMMAREA(WS-CA)                                        01210004
+012200      END-EXEC.                                                   01220004
+012300******************************************************            01230000

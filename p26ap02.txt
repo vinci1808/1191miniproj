@@ -1,0 +1,82 @@
+000100 IDENTIFICATION DIVISION.                                         00010000
+000200 PROGRAM-ID. P26AP02.                                             00020000
+000300 DATA DIVISION.                                                   00030000
+000400 WORKING-STORAGE SECTION.                                         00040000
+000500 01  WS-RESP-CODE      PIC S9(03) COMP VALUE ZERO.                00050000
+000600 01  WS-CA.                                                       00060000
+000700     03  WS-USER-CARDNO        PIC 9(16) VALUE ZERO.              00070001
+000800     COPY P26AS01.                                                00080000
+000900     COPY DFHAID.                                                 00090000
+001000     COPY DFHBMSCA.                                               00100000
+001100     COPY USERREC.                                                00110000
+001200 LINKAGE SECTION.                                                 00120000
+001300 01  DFHCOMMAREA  PIC X(25).                                      00130000
+001400 PROCEDURE DIVISION.                                              00140000
+001500 MAIN-PARA.                                                       00150000
+001600     IF EIBCALEN = ZERO                                           00160000
+001700       PERFORM SEND-BMSCN-MAP                                     00170010
+001800     ELSE                                                         00180000
+001900        MOVE DFHCOMMAREA TO WS-CA                                 00190011
+002000        PERFORM RECEIVE-BMSCN-MAP                                 00200012
+002100        PERFORM PROCESS-BMSCN-PARA                                00210010
+002200     END-IF.                                                      00220000
+002300 END-PARA.                                                        00230004
+002400     EXEC CICS RETURN                                             00240004
+002500         TRANSID('P26B')                                          00250004
+002600         COMMAREA(WS-CA)                                          00260004
+002700     END-EXEC.                                                    00270004
+002800 SEND-BMSCN-MAP.                                                  00280001
+002900*    MOVE -1 TO CARDNOL                                           00290004
+003000     EXEC CICS SEND                                               00300001
+003100        MAP('BMSCN')                                              00310001
+003200        MAPSET('P26AS01')                                         00320001
+003300        FROM(BMSCNO)                                              00330001
+003400        CURSOR                                                    00340001
+003500        ERASE                                                     00350001
+003600     END-EXEC.                                                    00360001
+003700 RECEIVE-BMSCN-MAP.                                               00370001
+003800     EXEC CICS RECEIVE                                            00380001
+003900        MAP('BMSCN')                                              00390001
+004000        MAPSET('P26AS01')                                         00400001
+004100        INTO(BMSCNI)                                              00410001
+004200     END-EXEC.                                                    00420001
+004300 PROCESS-BMSCN-PARA.                                              00430000
+004400     EVALUATE EIBAID                                              00440000
+004500        WHEN DFHENTER                                             00450000
+004600          PERFORM CHECK-CARDNO-PARA                               00460001
+004700        WHEN DFHPF1                                               00470000
+004800          EXEC CICS XCTL                                          00480000
+004900              PROGRAM('P26AP01')                                  00490000
+005000          END-EXEC                                                00500000
+005100        WHEN OTHER                                                00510000
+005200           MOVE 'INVALID KEY PRESSED' TO MSGCO                    00520000
+005300     END-EVALUATE.                                                00530000
+005400 CHECK-CARDNO-PARA.                                               00540001
+005500     IF CARDNOL = ZERO OR CARDNOI = SPACES                        00550000
+005600         MOVE 'PLEASE ENTER A VALID CARD NUMBER' TO MSGCO         00560000
+005700         PERFORM READ-USER-CARDNO                                 00570000
+005800     END-IF.                                                      00580000
+005900 READ-USER-CARDNO.                                                00590000
+006000     MOVE CARDNOI TO WS-USER-CARDNO                               00600000
+006100     EXEC CICS READ                                               00610000
+006200        FILE('P26FFILE')                                          00620000
+006300        RIDFLD(WS-USER-CARDNO)                                    00630000
+006400        INTO(USER-RECORD)                                         00640000
+006500        RESP(WS-RESP-CODE)                                        00650000
+006600     END-EXEC.                                                    00660000
+006700     DISPLAY 'REPONSE CODE: ', WS-RESP-CODE                       00670000
+006800     EVALUATE WS-RESP-CODE                                        00680000
+006900        WHEN DFHRESP(NORMAL)                                      00690000
+007000            MOVE USER-ACCNO   TO BACCNOO                          00700000
+007100            PERFORM TRANSFER-PARA                                 00710000
+007200        WHEN DFHRESP(NOTFND)                                      00720000
+007300            MOVE -1           TO CARDNOL                          00730000
+007400            MOVE 'ENTER VALID CARD NUMBER' TO MSGCO               00740000
+007500        WHEN OTHER                                                00750000
+007600           MOVE 'ERROR PROCESSING FILE' TO MSGCO                  00760000
+007700     END-EVALUATE.                                                00770000
+007800 TRANSFER-PARA.                                                   00780000
+007900      EXEC CICS XCTL                                              00790000
+008000           PROGRAM('P26AP03')                                     00800000
+008100           COMMAREA(WS-CA)                                        00810000
+008200      END-EXEC.                                                   00820000

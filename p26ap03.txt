@@ -1,0 +1,93 @@
+000100 IDENTIFICATION DIVISION.                                         00010000
+000200 PROGRAM-ID. P26AP02.                                             00020000
+000300 DATA DIVISION.                                                   00030000
+000400 WORKING-STORAGE SECTION.                                         00040000
+000500 01  WS-RESP-CODE      PIC S9(03) COMP VALUE ZERO.                00050000
+000600 01  TEMP-PIN          PIC 9(04)  VALUE ZEROS.                    00060004
+000700 01  WS-CA.                                                       00070000
+000800     03  WS-CA1                PIC X(01) VALUE ZERO.              00080000
+000900     03  WS-USER-CARDNO        PIC 9(16) VALUE ZERO.              00090000
+001000     03  WS-ACC-TYPE           PIC X(07) VALUE SPACES.            00100000
+001100     COPY P26AS01.                                                00110000
+001200     COPY DFHAID.                                                 00120000
+001300     COPY DFHBMSCA.                                               00130000
+001400     COPY USERREC.                                                00140000
+001500 LINKAGE SECTION.                                                 00150000
+001600 01  DFHCOMMAREA  PIC X(25).                                      00160000
+001700 PROCEDURE DIVISION.                                              00170000
+001800 MAIN-PARA.                                                       00180000
+001900     IF EIBCALEN = ZERO                                           00190000
+002000        PERFORM ERROR-PARA                                        00200000
+002100     ELSE                                                         00210000
+002200        PERFORM COMMAREA-PARA                                     00220000
+002300     END-IF.                                                      00230000
+002400 END-PARA.                                                        00240000
+002500     MOVE SPACES TO WS-CA1                                        00250000
+002600     EXEC CICS RETURN                                             00260000
+002700         TRANSID('P26C')                                          00270001
+002800         COMMAREA(WS-CA)                                          00280000
+002900     END-EXEC.                                                    00290000
+003000 COMMAREA-PARA.                                                   00300000
+003100     MOVE DFHCOMMAREA  TO WS-CA                                   00310000
+003200       EVALUATE WS-CA1                                            00320005
+003300           WHEN '2'                                               00330006
+003400               PERFORM SEND-BMSPIN-MAP                            00340003
+003500           WHEN OTHER                                             00350000
+003600               PERFORM RECEIVE-BMSPIN-MAP                         00360002
+003700               PERFORM PROCESS-BMSPIN-PARA                        00370002
+003800       END-EVALUATE.                                              00380000
+003900 SEND-BMSPIN-MAP.                                                 00390002
+004000     EXEC CICS SEND                                               00400000
+004100        MAP('BMSPIN')                                             00410002
+004200        MAPSET('P26AS01')                                         00420000
+004300        FROM(BMSPINO)                                             00430002
+004400        CURSOR                                                    00440000
+004500        ERASE                                                     00450000
+004600     END-EXEC.                                                    00460000
+004700 RECEIVE-BMSPIN-MAP.                                              00470002
+004800     EXEC CICS RECEIVE                                            00480000
+004900        MAP('BMSPIN')                                             00490002
+005000        MAPSET('P26AS01')                                         00500000
+005100        INTO(BMSPINI)                                             00510002
+005200     END-EXEC.                                                    00520000
+005300 PROCESS-BMSPIN-PARA.                                             00530002
+005400     EVALUATE EIBAID                                              00540000
+005500        WHEN DFHENTER                                             00550000
+005600          PERFORM CHECK-PIN-PARA                                  00560001
+005700        WHEN DFHPF1                                               00570000
+005800          EXEC CICS XCTL                                          00580000
+005900              PROGRAM('P26AP01')                                  00590000
+006000          END-EXEC                                                00600000
+006100        WHEN OTHER                                                00610000
+006200           MOVE 'INVALID KEY PRESSED' TO MSGPO                    00620002
+006300     END-EVALUATE.                                                00630000
+006400 CHECK-PIN-PARA.                                                  00640001
+006500      IF PINL < 4 OR PINI = SPACES OR PINI = ZERO                 00650002
+006600          MOVE 'PLEASE ENTER A VALID CARD NUMBER' TO MSGPO        00660002
+006700      ELSE                                                        00670002
+006800          PERFORM PROCESS-PIN                                     00680002
+006900      END-IF.                                                     00690002
+007000 PROCESS-PIN.                                                     00700002
+007100      EXEC CICS READ                                              00710002
+007200         FILE('P26FFILE')                                         00720002
+007300         RIDFLD(WS-USER-CARDNO)                                   00730002
+007400         INTO(USER-RECORD)                                        00740002
+007500         RESP(WS-RESP-CODE)                                       00750002
+007600      END-EXEC                                                    00760002
+007700      EVALUATE WS-RESP-CODE                                       00770002
+007800        WHEN DFHRESP(NORMAL)                                      00780002
+007900          MOVE USER-PIN     TO TEMP-PIN                           00790002
+008000          EXEC CICS XCTL                                          00800002
+008100               PROGRAM('P26AP04')                                 00810002
+008200               COMMAREA(WS-CA)                                    00820002
+008300          END-EXEC                                                00830002
+008400        WHEN DFHRESP(NOTFND)                                      00840002
+008500          MOVE -1           TO PINL                               00850002
+008600          MOVE 'ENTER VALID PIN' TO MSGPO                         00860002
+008700        WHEN OTHER                                                00870002
+008800            MOVE 'ERROR PROCESSING FILE' TO MSGPO                 00880002
+008900      END-EVALUATE.                                               00890002
+009000 ERROR-PARA.                                                      00900000
+009100      EXEC CICS XCTL                                              00910000
+009200           PROGRAM('P26AP01')                                     00920000
+009300      END-EXEC.                                                   00930000

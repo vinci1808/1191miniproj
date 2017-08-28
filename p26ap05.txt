@@ -1,0 +1,121 @@
+000100 IDENTIFICATION DIVISION.                                         00010000
+000200 PROGRAM-ID. P26AP05.                                             00020001
+000300 DATA DIVISION.                                                   00030000
+000400 WORKING-STORAGE SECTION.                                         00040000
+000500 01  WS-CA.                                                       00050002
+000600     03  WS-USER-CARDNO        PIC 9(16) VALUE ZERO.              00060002
+000700     03  WS-ACC-TYPE           PIC X(07) VALUE SPACES.            00070002
+000800     03  WS-TRN-TYPE           PIC X(01) VALUE ZEROS.             00080016
+000900 01  WS-CHOICE   PIC 9(01) VALUE ZERO.                            00090000
+001000     88  VALID-CHOICE      VALUE 1 THRU 4.                        00100000
+001100 01  WS-CHOICE-X REDEFINES WS-CHOICE PIC X(01).                   00110000
+001200 01  WS-MSGM  PIC X(30) VALUE                                     00120003
+001300     'TRANSACTION CANCELLED!'.                                    00130000
+001400     COPY P26AS01.                                                00140002
+001500     COPY DFHAID.                                                 00150000
+001600     COPY USERREC.                                                00160002
+001700 LINKAGE SECTION.                                                 00170000
+001800 01  DFHCOMMAREA     PIC X(25).                                   00180010
+001900                                                                  00190000
+002000 PROCEDURE DIVISION.                                              00200000
+002100 MAIN-PARA.                                                       00210000
+002200     IF EIBCALEN = ZERO                                           00220000
+002300         PERFORM ERROR-PARA                                       00230000
+002400     ELSE                                                         00240000
+002500         MOVE DFHCOMMAREA TO WS-CA                                00250012
+002600            PERFORM FIRST-PARA                                    00260012
+002700            PERFORM NEXT-PARA                                     00270012
+002800     END-IF.                                                      00280012
+002900 END-PARA.                                                        00290000
+003000     EXEC CICS RETURN                                             00300000
+003100         TRANSID('P26E')                                          00310002
+003200         COMMAREA(WS-CA)                                          00320000
+003300     END-EXEC.                                                    00330000
+003400 FIRST-PARA.                                                      00340000
+003500     MOVE LOW-VALUES TO BMSMENO                                   00350007
+003600     PERFORM SEND-MAP.                                            00360012
+003700                                                                  00370000
+003800 SEND-MAP.                                                        00380000
+003900     EXEC CICS SEND                                               00390000
+004000         MAP('BMSMEN')                                            00400005
+004100         MAPSET('P26AS01')                                        00410002
+004200         FROM (BMSMENI)                                           00420005
+004300         ERASE                                                    00430000
+004400     END-EXEC.                                                    00440000
+004500                                                                  00450000
+004600                                                                  00460000
+004700 NEXT-PARA.                                                       00470000
+004800     EVALUATE EIBAID                                              00480000
+004900        WHEN DFHPF3                                               00490000
+005000         EXEC CICS XCTL                                           00500000
+005100            PROGRAM('P26AP04')                                    00510005
+005200            COMMAREA(WS-CA)                                       00520006
+005300         END-EXEC                                                 00530000
+005400        WHEN DFHENTER                                             00540000
+005500            PERFORM PROCESS-PARA                                  00550000
+005600        WHEN DFHPF1                                               00560009
+005700         EXEC CICS XCTL                                           00570005
+005800            PROGRAM('P26AP01')                                    00580005
+005900            COMMAREA(WS-CA)                                       00590006
+006000         END-EXEC                                                 00600000
+006100        WHEN OTHER                                                00610000
+006200            MOVE 'INVALID KEY PRESSED' TO MSGMO                   00620003
+006300     END-EVALUATE.                                                00630000
+006400     PERFORM SEND-MAP.                                            00640000
+006500                                                                  00650000
+006600                                                                  00660000
+006700 PROCESS-PARA.                                                    00670000
+006800     PERFORM RECEIVE-MAP.                                         00680000
+006900     MOVE CHOICEI TO WS-CHOICE-X                                  00690013
+007000     IF VALID-CHOICE                                              00700000
+007100         PERFORM TRANSFER-PARA                                    00710000
+007200     ELSE                                                         00720008
+007300         MOVE 'INVALID CHOICE' TO MSGMO                           00730003
+007400     END-IF.                                                      00740000
+007500                                                                  00750000
+007600 TRANSFER-PARA.                                                   00760000
+007700     EVALUATE WS-CHOICE-X                                         00770016
+007800        WHEN 1                                                    00780000
+007900        MOVE 1 TO WS-TRN-TYPE                                     00790017
+008000*       WITHDRAW                                                  00800004
+008100           EXEC CICS XCTL                                         00810000
+008200              PROGRAM('P13AP06')                                  00820016
+008300              COMMAREA(WS-CA)                                     00830006
+008400           END-EXEC                                               00840000
+008500        WHEN 2                                                    00850000
+008600        MOVE 2 TO WS-TRN-TYPE                                     00860017
+008700*       DEPOSIT                                                   00870004
+008800           EXEC CICS XCTL                                         00880000
+008900              PROGRAM('P13AP06')                                  00890016
+009000              COMMAREA(WS-CA)                                     00900006
+009100           END-EXEC                                               00910000
+009200        WHEN 3                                                    00920000
+009300*       MINI STATEMENT                                            00930004
+009400*          EXEC CICS XCTL                                         00940018
+009500*             PROGRAM('P26AP09')                                  00950018
+009600*             COMMAREA(WS-CA)                                     00960018
+009700*          END-EXEC                                               00970018
+009800           MOVE 'PROGRAM NOT READY' TO MSGMO                      00980018
+009900        WHEN 4                                                    00990000
+010000*       BALANCE ENQUIRY                                           01000004
+010100           EXEC CICS XCTL                                         01010000
+010200              PROGRAM('P26AP08')                                  01020002
+010300              COMMAREA(WS-CA)                                     01030006
+010400           END-EXEC                                               01040000
+010500        WHEN OTHER                                                01050000
+010600           MOVE 'PROGRAM NOT READY' TO MSGMO                      01060003
+010700     END-EVALUATE.                                                01070000
+010800                                                                  01080000
+010900                                                                  01090000
+011000 RECEIVE-MAP.                                                     01100000
+011100     EXEC CICS RECEIVE                                            01110000
+011200         MAP('BMSMEN')                                            01120005
+011300         MAPSET('P26AS01')                                        01130002
+011400         INTO(BMSMENO)                                            01140005
+011500     END-EXEC.                                                    01150000
+011600                                                                  01160002
+011700 ERROR-PARA.                                                      01170000
+011800      EXEC CICS XCTL                                              01180000
+011900           PROGRAM('P26AP01')                                     01190002
+012000           COMMAREA(WS-CA)                                        01200006
+012100      END-EXEC.                                                   01210000
