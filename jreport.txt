@@ -1,0 +1,271 @@
+000100 IDENTIFICATION DIVISION.                                         00010000
+000200 PROGRAM-ID. P13AP09.                                             00020000
+000300 ENVIRONMENT DIVISION.                                            00030001
+000400 INPUT-OUTPUT SECTION.                                            00040001
+000500 FILE-CONTROL.                                                    00050001
+000600     SELECT REPORT-FILE ASSIGN TO REPFILE                         00060001
+000700     ORGANIZATION IS SEQUENTIAL                                   00070001
+000800     ACCESS MODE  IS SEQUENTIAL                                   00080001
+000900     FILE STATUS  IS WS-REP-STAT.                                 00090001
+001000 DATA DIVISION.                                                   00100001
+001100 FILE SECTION.                                                    00110000
+001200 FD  REPORT-FILE                                                  00120000
+001300     RECORD CONTAINS 80 CHARACTERS                                00130000
+001400     RECORDING MODE IS F.                                         00140000
+001500 01  REPORT-RECORD PIC X(80).                                     00150000
+001600 WORKING-STORAGE SECTION.                                         00160000
+001700**************REQUIRED SQL STATEMENTS***************              00170003
+001800     EXEC SQL                                                     00180003
+001900          INCLUDE USERREC                                         00190003
+002000     END-EXEC.                                                    00200003
+002100     EXEC SQL                                                     00210003
+002200          INCLUDE TRANSREC                                        00220003
+002300     END-EXEC.                                                    00230003
+002400     EXEC SQL                                                     00240003
+002500          INCLUDE SQLCA                                           00250003
+002600     END-EXEC.                                                    00260003
+002700****************CURSOR DECLARATION******************              00270003
+002800     EXEC SQL                                                     00280003
+002900         DECLARE C13_TRN_CUR CURSOR FOR                           00290003
+003000         SELECT TRN_NO                                            00300006
+003100               ,TRN_DATE                                          00310006
+003200               ,TRN_TIME                                          00320006
+003300               ,TRN_TYPE                                          00330006
+003400               ,TRN_AMT                                           00340015
+003500               ,TCARD_NO                                          00350006
+003600         FROM T13_TRN_TABLE                                       00360006
+003700*        WHERE TCARD_NO = :TCARD_NO                               00370008
+003800     END-EXEC.                                                    00380003
+003900****************REQUIRED VARIABLES******************              00390003
+004000 01  WS-VARIABLES.                                                00400002
+004100     03  WS-CARDNO        PIC 9(16)    VALUE ZEROS.               00410012
+004200     03  WS-ACTSTAT       PIC X(01)    VALUE SPACES.              00420002
+004300     03  WS-DATE.                                                 00430002
+004400         05  WS-DATE-YY   PIC 9(02).                              00440033
+004500         05  WS-DATE-MM   PIC 9(02).                              00450002
+004600         05  WS-DATE-DD   PIC 9(02).                              00460002
+004700     03  WS-TOT-AMT       PIC 9(08)V99 VALUE ZERO.                00470002
+004800     03  WS-TRANSTAT      PIC X(01)    VALUE SPACES.              00480002
+004900     03  WS-REP-STAT      PIC X(02)    VALUE SPACES.              00490002
+005000 01  WS-CARDNO-I          PIC S9(16)V  USAGE COMP-3 VALUE ZERO.   00500012
+005100 01  WS-SQLCODE           PIC S9(03) VALUE ZEROS.                 00510012
+005200******************REPORT FORMAT*********************              00520002
+005300 01  HEADING-LINE1.                                               00530002
+005400     03  FILLER           PIC X(35) VALUE SPACES.                 00540002
+005500     03  FILLER           PIC X(10) VALUE                         00550002
+005600                          'MARVS BANK'.                           00560002
+005700     03  FILLER           PIC X(35) VALUE SPACES.                 00570002
+005800 01  HEADING-LINE2.                                               00580002
+005900     03  FILLER           PIC X(33) VALUE SPACES.                 00590002
+006000     03  FILLER           PIC X(14) VALUE                         00600002
+006100                          'MINI STATEMENT'.                       00610002
+006200     03  FILLER           PIC X(33) VALUE SPACES.                 00620002
+006300 01  HEADING-LINE3.                                               00630002
+006400     03  FILLER           PIC X(15) VALUE 'ACCOUNT NUMBER:'.      00640002
+006500     03  H-ACCT           PIC X(15) VALUE ZEROS.                  00650003
+006600     03  FILLER           PIC X(19) VALUE SPACES.                 00660003
+006700     03  FILLER           PIC X(21) VALUE 'REPORT GENERATED ON :'.00670002
+006800     03  H-DATE.                                                  00680002
+006900         05  WS-DATE-DD   PIC 9(02) VALUE ZERO.                   00690002
+007000         05  FILLER       PIC X(01) VALUE '/'.                    00700033
+007100         05  WS-DATE-MM   PIC 9(02) VALUE ZERO.                   00710002
+007200         05  FILLER       PIC X(03) VALUE '/20'.                  00720034
+007300         05  WS-DATE-YY   PIC 9(02) VALUE ZERO.                   00730033
+007400 01  HEADING-LINE4.                                               00740005
+007500     03  FILLER           PIC X(11) VALUE 'USER NAME: '.          00750005
+007600     03  H-NAME           PIC X(15) VALUE ZEROS.                  00760005
+007700     03  FILLER           PIC X(01) VALUE SPACES.                 00770005
+007800     03  FILLER           PIC X(13) VALUE 'CARD NUMBER: '.        00780005
+007900     03  H-CARDNO         PIC 9(15) VALUE ZEROS.                  00790005
+008000     03  FILLER           PIC X(01) VALUE SPACES.                 00800034
+008100     03  FILLER           PIC X(13) VALUE 'CURRENT BAL: '.        00810005
+008200     03  H-CURBAL         PIC ZZ,ZZZ,ZZ9.99 VALUE ZERO.           00820005
+008300 01  HEADING-LINE5.                                               00830005
+008400     03  FILLER           PIC X(14) VALUE 'ACCOUNT TYPE: '.       00840005
+008500     03  H-TYPE           PIC X(01) VALUE SPACES.                 00850005
+008600     03  FILLER           PIC X(50) VALUE SPACES.                 00860005
+008700     03  FILLER           PIC X(14) VALUE 'ACCOUNT STAT: '.       00870005
+008800     03  H-STAT           PIC X(01) VALUE SPACES.                 00880005
+008900 01 HEADING-LINE6.                                                00890005
+009000     02 FILLER            PIC X(80)   VALUE ALL '-'.              00900002
+009100 01 HEADING-LINE7.                                                00910005
+009200     03  FILLER           PIC X(08) VALUE 'TRANS NO'.             00920023
+009300     03  FILLER           PIC X(08) VALUE SPACES.                 00930023
+009400     03  FILLER           PIC X(10) VALUE 'TRANS TYPE'.           00940023
+009500     03  FILLER           PIC X(07) VALUE SPACES.                 00950023
+009600     03  FILLER           PIC X(10) VALUE 'TRANS DATE'.           00960023
+009700     03  FILLER           PIC X(07) VALUE SPACES.                 00970023
+009800     03  FILLER           PIC X(10) VALUE 'TRANS TIME'.           00980023
+009900     03  FILLER           PIC X(08) VALUE SPACES.                 00990023
+010000     03  FILLER           PIC X(12) VALUE 'TRANS AMOUNT'.         01000023
+010100 01  DETAIL-LINE.                                                 01010002
+010200     03  D-TRAN-NO        PIC 9(05) VALUE ZEROS.                  01020009
+010300     03  FILLER           PIC X(03) VALUE SPACES.                 01030023
+010400     03  FILLER           PIC X(08) VALUE SPACES.                 01040023
+010500     03  FILLER           PIC X(04) VALUE SPACES.                 01050023
+010600     03  D-TRAN-TYPE      PIC X(01) VALUE SPACES.                 01060023
+010700     03  FILLER           PIC X(05) VALUE SPACES.                 01070023
+010800     03  FILLER           PIC X(07) VALUE SPACES.                 01080023
+010900     03  D-TRAN-DATE      PIC x(10) VALUE SPACES.                 01090023
+011000     03  FILLER           PIC X(07) VALUE SPACES.                 01100023
+011100     03  FILLER           PIC X(01) VALUE SPACES.                 01110023
+011200     03  D-TRAN-TIME      PIC x(08) VALUE SPACES.                 01120023
+011300     03  FILLER           PIC X(01) VALUE SPACES.                 01130023
+011400     03  FILLER           PIC X(08) VALUE SPACES.                 01140023
+011500     03  D-TRAN-AMT       PIC ZZ,ZZ9 VALUE ZERO.                  01150023
+011600     03  FILLER           PIC X(06) VALUE SPACES.                 01160023
+011700 01  FOOTER-LINE.                                                 01170023
+011800     03  FILLER           PIC X(10) VALUE SPACES.                 01180023
+011900     03  FILLER           PIC X(59) VALUE                         01190023
+012000   '***********************END OF REPORT***********************'. 01200023
+012100     03  FILLER           PIC X(11) VALUE SPACES.                 01210023
+012200***********REQUIRED ERROR MESSAGE VARIABLES************           01220023
+012300 01 ERROR-MESSAGE.                                                01230023
+012400   05 ERROR-MESSAGE-LENGTH   PIC S9(4) COMP VALUE +800.           01240023
+012500   05 ERROR-MESSAGE-LINE     PIC X(80) OCCURS 10 TIMES            01250023
+012600                                  INDEXED BY EML-INDEX.           01260023
+012700 01 ERROR-LINE-LENGTH        PIC S9(9) COMP VALUE +80.            01270023
+012800*******************************************************           01280023
+012900 PROCEDURE DIVISION.                                              01290023
+013000***********************************************************       01300023
+013100*                     0000-MAIN-PARA                      *       01310023
+013200***********************************************************       01320023
+013300 0000-MAIN-PARA.                                                  01330023
+013400     DISPLAY '0000-MAIN-PARA'                                     01340023
+013500     OPEN OUTPUT REPORT-FILE                                      01350023
+013600     ACCEPT WS-CARDNO                                             01360023
+013700     MOVE WS-CARDNO TO WS-CARDNO-I                                01370023
+013800     PERFORM 1000-HEADING-PARA                                    01380023
+013900     PERFORM 2000-OPEN-CURSOR                                     01390023
+014000     PERFORM 6000-GET-USER-INFO                                   01400025
+014100     PERFORM UNTIL SQLCODE = 100                                  01410023
+014200         PERFORM 3000-PROCESS-PARA                                01420023
+014300     END-PERFORM                                                  01430023
+014400     PERFORM 8000-CLOSE-CURSOR                                    01440023
+014500     PERFORM 9000-EXIT-PARA                                       01450023
+014600     STOP RUN.                                                    01460023
+014700*******************************************************           01470023
+014800*                   1000-HEADING-PARA                 *           01480023
+014900*******************************************************           01490023
+015000 1000-HEADING-PARA.                                               01500023
+015100     DISPLAY '1000-HEADING-PARA'                                  01510023
+015200     WRITE REPORT-RECORD FROM HEADING-LINE6                       01520023
+015300     WRITE REPORT-RECORD FROM HEADING-LINE1                       01530023
+015400     WRITE REPORT-RECORD FROM HEADING-LINE6                       01540023
+015500     WRITE REPORT-RECORD FROM HEADING-LINE2                       01550023
+015600     WRITE REPORT-RECORD FROM HEADING-LINE6.                      01560027
+015700*******************************************************           01570023
+015800*                  2000-OPEN-CURSOR                   *           01580023
+015900*******************************************************           01590023
+016000 2000-OPEN-CURSOR.                                                01600023
+016100     DISPLAY '2000-OPEN-CURSOR'                                   01610023
+016200     EXEC SQL                                                     01620023
+016300         OPEN C13_TRN_CUR                                         01630023
+016400     END-EXEC                                                     01640023
+016500     DISPLAY 'OPNCRSR SQL =', SQLCODE.                            01650023
+016600********************************************************          01660023
+016700*                  3000-PROCESS-PARA                   *          01670023
+016800********************************************************          01680023
+016900 3000-PROCESS-PARA.                                               01690023
+017000     DISPLAY '3000-PROCESS-PARA'                                  01700023
+017100     PERFORM 4000-FETCH-RECORD                                    01710023
+017200     EVALUATE SQLCODE                                             01720023
+017300       WHEN ZERO                                                  01730023
+017400           PERFORM 5000-MOVE-TRN-PARA                             01740023
+017500       WHEN 100                                                   01750023
+017600          DISPLAY 'END-OF-RECORD'                                 01760023
+017700       WHEN OTHER                                                 01770023
+017800           PERFORM 1010-ERROR-PARA                                01780023
+017900     END-EVALUATE.                                                01790023
+018000********************************************************          01800023
+018100*                 4000-FETCH-RECORD                    *          01810023
+018200********************************************************          01820023
+018300 4000-FETCH-RECORD.                                               01830023
+018400     DISPLAY '4000-FETCH-RECORD'                                  01840023
+018500     EXEC SQL                                                     01850023
+018600         FETCH C13_TRN_CUR INTO                                   01860023
+018700         :TRN-NO, :TRN-DATE, :TRN-TIME, :TRN-TYPE, :TRN-AMT,      01870023
+018800         :TCARD-NO                                                01880023
+018900     END-EXEC                                                     01890023
+019000     DISPLAY 'FETCH SQL =', SQLCODE.                              01900023
+019100********************************************************          01910023
+019200*                    5000-MOVE-TRN-PARA                *          01920023
+019300********************************************************          01930023
+019400 5000-MOVE-TRN-PARA.                                              01940023
+019500     DISPLAY '5000-MOVE-TRN-PARA'                                 01950023
+019600     MOVE TRN-NO     TO D-TRAN-NO                                 01960023
+019700     MOVE TRN-TYPE   TO D-TRAN-TYPE                               01970023
+019800     MOVE TRN-DATE   TO D-TRAN-DATE                               01980023
+019900     MOVE TRN-TIME   TO D-TRAN-TIME                               01990023
+020000     MOVE TRN-AMT    TO D-TRAN-AMT                                02000023
+020100     MOVE TCARD-NO   TO H-CARDNO                                  02010023
+020200     WRITE REPORT-RECORD FROM DETAIL-LINE.                        02020023
+020300*****************************************************             02030023
+020400*              6000-GET-USER-INFO                   *             02040023
+020500*****************************************************             02050023
+020600 6000-GET-USER-INFO.                                              02060023
+020700     DISPLAY '6000-GET-USER-INFO'                                 02070023
+020800     EXEC SQL                                                     02080023
+020900        SELECT NAME, BALANCE, ACC_TYPE, ACC_NO, ACC_STAT,         02090030
+021000        CARD_NO                                                   02100030
+021100        INTO :NAME, :BALANCE, :ACC-TYPE, :ACC-NO, :ACC-STAT,      02110030
+021200        :CARD-NO                                                  02120030
+021300        FROM T13_USER_TABLE                                       02130023
+021400        WHERE CARD_NO = :WS-CARDNO-I                              02140023
+021500     END-EXEC                                                     02150023
+021600     MOVE SQLCODE TO WS-SQLCODE                                   02160023
+021700     DISPLAY 'USER INFO SQL ', SQLCODE                            02170023
+021800     EVALUATE SQLCODE                                             02180023
+021900     WHEN ZERO                                                    02190023
+022000        PERFORM 7000-MOVE-USER-PARA                               02200023
+022100     WHEN OTHER                                                   02210023
+022200        PERFORM 1010-ERROR-PARA                                   02220023
+022300     END-EVALUATE.                                                02230023
+022400******************************************************            02240023
+022500*                7000-MOVE-USER-PARA                 *            02250023
+022600******************************************************            02260023
+022700 7000-MOVE-USER-PARA.                                             02270023
+022800     DISPLAY '7000-MOVE-USER-PARA'                                02280023
+022900     MOVE NAME-TEXT(1:NAME-LEN) TO H-NAME                         02290023
+023000     MOVE BALANCE               TO H-CURBAL                       02300023
+023100     MOVE ACC-TYPE              TO H-TYPE                         02310023
+023200     MOVE ACC-NO                TO H-ACCT                         02320023
+023300     MOVE ACC-STAT              TO H-STAT                         02330024
+023400     MOVE CARD-NO               TO H-CARDNO                       02340030
+023500     PERFORM 1200-DATE-PARA                                       02350032
+023600     WRITE REPORT-RECORD FROM HEADING-LINE3                       02360024
+023700     WRITE REPORT-RECORD FROM HEADING-LINE4                       02370024
+023800     WRITE REPORT-RECORD FROM HEADING-LINE5                       02380024
+023900     WRITE REPORT-RECORD FROM HEADING-LINE6                       02390029
+024000     WRITE REPORT-RECORD FROM HEADING-LINE7                       02400029
+024100     WRITE REPORT-RECORD FROM HEADING-LINE6.                      02410029
+024200*******************************************************           02420023
+024300*                  8000-CLOSE-CURSOR                   *          02430023
+024400*******************************************************           02440023
+024500 8000-CLOSE-CURSOR.                                               02450023
+024600     DISPLAY '8000-CLOSE-CURSOR'                                  02460023
+024700     EXEC SQL                                                     02470023
+024800         CLOSE C13_TRN_CUR                                        02480023
+024900     END-EXEC.                                                    02490023
+025000 1200-DATE-PARA.                                                  02500032
+025100     ACCEPT WS-DATE FROM DATE                                     02510031
+025200     MOVE CORRESPONDING WS-DATE TO H-DATE.                        02520031
+025300*******************************************************           02530023
+025400*                  9000-EXIT-PARA                     *           02540023
+025500*******************************************************           02550023
+025600 9000-EXIT-PARA.                                                  02560023
+025700     DISPLAY '9000-EXIT-PARA'                                     02570023
+025800     WRITE REPORT-RECORD FROM HEADING-LINE6                       02580023
+025900     WRITE REPORT-RECORD FROM FOOTER-LINE                         02590023
+026000     CLOSE REPORT-FILE.                                           02600023
+026100*******************************************************           02610023
+026200*                  1010-ERROR-PARA                     *          02620023
+026300*******************************************************           02630023
+026400 1010-ERROR-PARA.                                                 02640023
+026500     DISPLAY '1010-ERROR-PARA'                                    02650023
+026600     CALL 'DSNTIAR' USING SQLCA                                   02660023
+026700         ERROR-MESSAGE                                            02670023
+026800         ERROR-LINE-LENGTH                                        02680023
+026900     DISPLAY '*----------------------------------------------*'   02690023
+027000     DISPLAY ERROR-MESSAGE-LINE(EML-INDEX)                        02700023
+027100     DISPLAY '*----------------------------------------------*'.  02710023
